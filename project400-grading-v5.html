@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project 400 — Assessment Panel</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue:#185FA5; --blue-l:#E6F1FB; --blue-m:#378ADD;
+  --green-l:#EAF3DE; --green:#3B6D11;
+  --amber-l:#FAEEDA; --amber:#854F0B;
+  --red-l:#FCEBEB; --red:#A32D2D;
+  --gray-l:#F1EFE8; --gray:#5F5E5A;
+  --text:#1a1a1a; --text2:#555; --text3:#888;
+  --bg:#f5f6f8; --surface:#fff; --border:#e2e4e8;
+  --r:10px; --rs:6px;
+}
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; }
+
+.app { max-width:980px; margin:0 auto; padding:1rem; }
+
+/* HEADER */
+.header { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:.85rem 1.25rem; margin-bottom:.75rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+.logo { width:30px; height:30px; background:#1a3a5c; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.logo svg { width:16px; height:16px; fill:white; }
+.app-title { font-size:14px; font-weight:600; }
+.app-sub { font-size:11px; color:var(--text3); }
+.sync-badge { font-size:11px; padding:3px 10px; border-radius:20px; border:1px solid var(--border); color:var(--text3); display:flex; align-items:center; gap:5px; }
+.sync-dot { width:6px; height:6px; border-radius:50%; background:#ccc; flex-shrink:0; }
+.sync-dot.live { background:#22c55e; }
+.sync-dot.saving { background:#f59e0b; }
+
+/* CARDS */
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:.85rem 1.25rem; margin-bottom:.75rem; }
+.section-label { font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.6rem; }
+
+/* STUDENT AREA */
+.student-grid { display:grid; grid-template-columns:2fr 1.2fr 1.5fr 1fr; gap:10px; }
+.field label { font-size:11px; color:var(--text3); display:block; margin-bottom:3px; }
+.field input, .field select { width:100%; padding:6px 9px; border:1px solid var(--border); border-radius:var(--rs); font-size:13px; color:var(--text); background:var(--bg); outline:none; transition:border-color .15s; }
+.field input:focus, .field select:focus { border-color:var(--blue-m); background:white; }
+
+/* CONTROL ROW */
+.control-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:.75rem; }
+.pill-group { display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
+.pill-label { font-size:11px; color:var(--text3); margin-right:2px; }
+.pill { font-size:12px; padding:5px 13px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text2); cursor:pointer; transition:all .15s; white-space:nowrap; }
+.pill:hover { border-color:var(--blue-m); color:var(--blue); }
+.pill.active { background:var(--blue-l); color:var(--blue); border-color:var(--blue-m); font-weight:500; }
+.tab-group { display:flex; background:var(--bg); border:1px solid var(--border); border-radius:20px; padding:2px; gap:2px; }
+.tab { font-size:12px; padding:4px 14px; border-radius:16px; border:none; background:transparent; color:var(--text2); cursor:pointer; transition:all .15s; }
+.tab.active { background:var(--surface); color:var(--text); font-weight:500; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+
+/* CAT CARDS */
+.cat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:.9rem 1.25rem; margin-bottom:.75rem; }
+.cat-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:.85rem; padding-bottom:.7rem; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+.cat-name { font-size:13px; font-weight:600; }
+.cat-right { display:flex; align-items:center; gap:8px; }
+.cat-weight-pill { font-size:11px; background:var(--bg); border:1px solid var(--border); color:var(--text3); padding:2px 8px; border-radius:10px; }
+
+/* SLIDERS */
+.crit-row { margin-bottom:.85rem; }
+.crit-name { font-size:12px; color:var(--text2); margin-bottom:4px; }
+.crit-hint { font-size:10px; color:var(--text3); font-style:italic; cursor:help; margin-left:4px; }
+.slider-wrap { display:flex; align-items:center; gap:14px; }
+.track-wrap { flex:1; position:relative; height:36px; }
+.grade-ticks { display:flex; position:absolute; top:0; left:0; width:100%; pointer-events:none; }
+/* Ticks positioned at exact slider stop points accounting for 9px thumb half-width */
+.grade-tick { position:absolute; font-size:10px; color:var(--text3); font-weight:500; transform:translateX(-50%); }
+.grade-tick:nth-child(1) { left:0%;    transform:translateX(0); }
+.grade-tick:nth-child(2) { left:25%;   transform:translateX(-50%); }
+.grade-tick:nth-child(3) { left:50%;   transform:translateX(-50%); }
+.grade-tick:nth-child(4) { left:75%;   transform:translateX(-50%); }
+.grade-tick:nth-child(5) { left:100%;  transform:translateX(-100%); }
+input[type=range] { width:100%; margin-top:15px; height:4px; -webkit-appearance:none; appearance:none; border-radius:2px; outline:none; cursor:pointer; padding:0; box-sizing:border-box; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:var(--blue); border:2px solid white; box-shadow:0 1px 3px rgba(0,0,0,.25); cursor:pointer; margin-top:-7px; }
+input[type=range]::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:var(--blue); border:2px solid white; box-shadow:0 1px 3px rgba(0,0,0,.25); cursor:pointer; }
+input[type=range]::-webkit-slider-runnable-track { height:4px; border-radius:2px; }
+input[type=range]::-moz-range-track { height:4px; border-radius:2px; }
+.grade-badge { min-width:38px; text-align:center; font-size:12px; font-weight:600; padding:3px 8px; border-radius:5px; flex-shrink:0; }
+.mini-badge { font-size:11px; font-weight:600; padding:1px 6px; border-radius:4px; display:inline-block; margin-right:2px; }
+.pct-out { font-size:11px; color:var(--text3); min-width:34px; text-align:right; flex-shrink:0; }
+.F { background:var(--red-l); color:var(--red); }
+.D { background:var(--amber-l); color:var(--amber); }
+.C { background:var(--gray-l); color:var(--gray); }
+.B { background:var(--blue-l); color:var(--blue); }
+.A { background:var(--green-l); color:var(--green); }
+
+/* CAT FOOTER */
+.cat-footer { margin-top:.75rem; padding-top:.75rem; border-top:1px solid var(--border); display:flex; gap:1rem; align-items:flex-start; }
+.comment-wrap { flex:1; }
+.comment-wrap label { font-size:11px; color:var(--text3); display:block; margin-bottom:3px; }
+textarea.comment { width:100%; font-size:12px; padding:6px 9px; border:1px solid var(--border); border-radius:var(--rs); background:var(--bg); color:var(--text); resize:vertical; min-height:44px; font-family:inherit; outline:none; transition:border-color .15s; }
+textarea.comment:focus { border-color:var(--blue-m); background:white; }
+.cat-total { text-align:center; min-width:68px; }
+.cat-total-label { font-size:10px; color:var(--text3); margin-bottom:4px; }
+.cat-total-pct { font-size:11px; color:var(--text3); margin-top:2px; }
+
+/* COMPARE / SUMMARY */
+.compare-table { width:100%; border-collapse:collapse; font-size:12px; }
+.compare-table th { padding:6px 10px; text-align:left; font-weight:500; color:var(--text3); border-bottom:1px solid var(--border); font-size:11px; }
+.compare-table td { padding:6px 10px; border-bottom:1px solid var(--border); color:var(--text2); vertical-align:middle; }
+.compare-table tr.total td { font-weight:600; color:var(--text); background:var(--bg); }
+.compare-table tr:last-child td { border-bottom:none; }
+.overall-row { display:flex; gap:10px; margin-bottom:.75rem; flex-wrap:wrap; }
+.sum-card { flex:1; min-width:85px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:10px 14px; }
+.sum-card .sn { font-size:10px; color:var(--text3); margin-bottom:3px; text-transform:uppercase; letter-spacing:.04em; }
+.sum-card .sg { font-size:22px; font-weight:700; }
+.sum-card .sp { font-size:11px; color:var(--text2); margin-top:1px; }
+.sum-card.consensus { border:2px solid var(--blue-m); background:var(--blue-l); }
+.sum-card.consensus .sn { color:var(--blue); }
+.sum-card.consensus .sg { color:#0C447C; }
+.bar-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.bar-name { font-size:12px; color:var(--text2); min-width:145px; }
+.bar-track { flex:1; height:6px; background:var(--bg); border-radius:3px; overflow:hidden; border:1px solid var(--border); }
+.bar-fill { height:100%; background:var(--blue-m); border-radius:3px; }
+.bar-right { font-size:11px; color:var(--text3); min-width:90px; text-align:right; }
+
+/* ACTION BAR */
+.action-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:.75rem 0; }
+.btn { padding:7px 16px; font-size:13px; border-radius:var(--rs); border:1px solid var(--border); cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap; }
+.btn:disabled { opacity:.4; cursor:not-allowed; }
+.btn-primary { background:var(--blue); color:white; border-color:var(--blue); font-weight:500; }
+.btn-primary:hover:not(:disabled) { background:#0C447C; }
+.btn-print { background:#166534; color:white; border-color:#166534; font-weight:500; }
+.btn-print:hover:not(:disabled) { background:#14532d; }
+.btn-secondary { background:var(--surface); color:var(--text2); }
+.btn-secondary:hover:not(:disabled) { background:var(--bg); }
+.status { font-size:12px; color:var(--text3); padding:0 4px; }
+
+/* MODALS */
+.modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:100; padding:1rem; }
+.modal { background:var(--surface); border-radius:var(--r); border:1px solid var(--border); padding:1.5rem; width:420px; max-width:100%; }
+.modal h3 { font-size:15px; font-weight:600; margin-bottom:.5rem; }
+.modal p { font-size:13px; color:var(--text2); margin-bottom:.75rem; line-height:1.55; }
+.modal .field { margin-bottom:10px; }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:1.25rem; }
+
+/* EXPANDER */
+.expander { margin-top:5px; }
+.expander-toggle { background:none; border:none; cursor:pointer; font-size:11px; color:var(--text3); padding:2px 0; display:flex; align-items:center; gap:4px; font-family:inherit; }
+.expander-toggle:hover { color:var(--blue); }
+.expander-toggle .arrow { display:inline-block; transition:transform .2s; font-style:normal; }
+.expander-toggle.open .arrow { transform:rotate(90deg); }
+.expander-body { display:none; margin-top:6px; background:var(--bg); border:1px solid var(--border); border-radius:var(--rs); padding:8px 10px; }
+.expander-body.open { display:block; }
+.expander-body ul { margin:0; padding-left:1.1rem; }
+.expander-body li { font-size:11px; color:var(--text2); line-height:1.6; }
+
+/* DELETE CONFIRM BOX */
+.delete-box { background:var(--red-l); border:1px solid #f7c1c1; border-radius:var(--rs); padding:1rem; margin-top:1rem; }
+.delete-box p { color:var(--red); font-size:12px; margin-bottom:.6rem; }
+.delete-box code { background:white; border:1px solid #f7c1c1; border-radius:4px; padding:2px 7px; font-family:monospace; font-size:13px; color:var(--red); }
+.delete-box input { width:100%; padding:7px 10px; border:1px solid #f7c1c1; border-radius:var(--rs); font-size:13px; font-family:monospace; outline:none; margin-top:.5rem; background:white; color:var(--text); transition:border-color .15s; }
+.delete-box input:focus { border-color:var(--red); }
+.delete-box input.match { border-color:#16a34a; background:#f0fdf4; }
+
+/* LOGIN */
+.login-screen { min-height:100vh; display:flex; align-items:center; justify-content:center; }
+.login-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:2rem; width:340px; text-align:center; }
+.login-card h1 { font-size:18px; font-weight:600; margin-bottom:.25rem; }
+.login-card p { font-size:13px; color:var(--text3); margin-bottom:1.5rem; }
+.login-card input { width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--rs); font-size:14px; margin-bottom:10px; outline:none; font-family:inherit; background:var(--bg); color:var(--text); }
+.login-card input:focus { border-color:var(--blue-m); background:white; }
+.login-card .btn { width:100%; justify-content:center; }
+
+/* NO STUDENT PLACEHOLDER */
+.placeholder { text-align:center; padding:3rem 1rem; color:var(--text3); }
+.placeholder .big { font-size:32px; margin-bottom:.5rem; }
+.placeholder p { font-size:13px; }
+
+@media (max-width:600px) {
+  .student-grid { grid-template-columns:1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div style="width:48px;height:48px;background:#1a3a5c;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto .85rem;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <h1>Project 400</h1>
+    <p>Assessment Panel · ATU</p>
+    <input type="text" id="loginName" placeholder="Your name (e.g. Dr. Murphy)" />
+    <input type="text" id="loginRole" placeholder="Role (e.g. Supervisor / Reader)" />
+    <div style="font-size:12px;color:var(--red);margin-bottom:8px;min-height:16px;" id="loginErr"></div>
+    <button class="btn btn-primary" onclick="doLogin()">Enter panel</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app" id="mainApp" style="display:none;">
+
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <div><div class="app-title">Project 400 — Assessment Panel</div><div class="app-sub">Atlantic Technological University</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div class="sync-badge"><div class="sync-dot" id="syncDot"></div><span id="syncLabel">Connecting…</span></div>
+      <span style="font-size:12px;color:var(--text3);" id="headerUser"></span>
+      <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="switchUser()">Switch user</button>
+    </div>
+  </div>
+
+  <!-- ACTIVE STUDENT BANNER -->
+  <div class="card" id="studentCard" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;flex-wrap:wrap;gap:8px;">
+      <div class="section-label" style="margin:0;">Current student</div>
+      <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="showNewStudentModal()">＋ New student</button>
+    </div>
+    <div class="student-grid">
+      <div class="field"><label>Student name</label><input type="text" id="fName" placeholder="e.g. Jane Murphy" oninput="saveStudentField()"></div>
+      <div class="field"><label>Student ID</label><input type="text" id="fId" placeholder="e.g. G00123456" oninput="saveStudentField()"></div>
+      <div class="field"><label>Supervisor / reader</label><input type="text" id="fSupervisor" placeholder="e.g. Dr. Smith" oninput="saveStudentField()"></div>
+      <div class="field"><label>Academic year</label>
+        <select id="fYear" onchange="saveStudentField()">
+          <option>2024–25</option><option selected>2025–26</option><option>2026–27</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLACEHOLDER when no student loaded -->
+  <div class="placeholder" id="noStudentMsg">
+    <div class="big">📋</div>
+    <p>No active assessment.<br>Click <strong>New student</strong> to begin.</p>
+    <button class="btn btn-primary" style="margin-top:1rem;" onclick="showNewStudentModal()">＋ New student</button>
+  </div>
+
+  <!-- ASSESSOR / TAB ROW -->
+  <div class="control-row" id="controlRow" style="display:none;">
+    <div class="pill-group">
+      <span class="pill-label">View assessor:</span>
+      <div id="assessorPills" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="tab-group">
+      <button class="tab active" onclick="switchView('grade',this)">Grade</button>
+      <button class="tab" onclick="switchView('compare',this)">Compare</button>
+      <button class="tab" onclick="switchView('summary',this)">Summary</button>
+    </div>
+  </div>
+
+  <!-- VIEWS -->
+  <div id="gradeView"><div id="catContainer"></div></div>
+  <div id="compareView" style="display:none;"></div>
+  <div id="summaryView" style="display:none;"></div>
+
+  <!-- ACTION BAR -->
+  <div class="action-bar" id="actionBar" style="display:none;">
+    <button class="btn btn-print" onclick="printAndClear()">🖨 Print PDF &amp; clear session</button>
+    <button class="btn btn-secondary" onclick="exportCSV()">Export CSV</button>
+    <span class="status" id="statusMsg"></span>
+  </div>
+
+</div>
+
+<!-- ══ MODALS ══ -->
+
+<!-- New student -->
+<div class="modal-backdrop" id="newStudentModal" style="display:none;">
+  <div class="modal">
+    <h3>New student assessment</h3>
+    <p>This will start a fresh session. Any current session data should be printed and cleared first.</p>
+    <div class="field"><label>Student name</label><input type="text" id="nsName" placeholder="e.g. John Doe" /></div>
+    <div class="field"><label>Student ID</label><input type="text" id="nsId" placeholder="e.g. G00123456" /></div>
+    <div style="font-size:12px;color:var(--red);min-height:16px;" id="nsErr"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('newStudentModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createStudent()">Start assessment</button>
+    </div>
+  </div>
+</div>
+
+<!-- Print & clear confirmation -->
+<div class="modal-backdrop" id="printModal" style="display:none;">
+  <div class="modal" style="width:480px;">
+    <h3>Print PDF &amp; clear session</h3>
+    <p>The PDF will download automatically. Once you confirm the PDF has saved successfully, the session data will be <strong>permanently deleted</strong> from the server.</p>
+
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:.85rem;margin:.75rem 0;">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Step 1</div>
+      <button class="btn btn-primary" id="btnDownload" onclick="triggerDownload()" style="width:100%;">⬇ Download PDF now</button>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px;" id="downloadConfirmMsg" style="display:none;"></div>
+    </div>
+
+    <div id="deleteSection" style="opacity:.4;pointer-events:none;transition:opacity .3s;">
+      <div class="delete-box">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Step 2 — Confirm deletion</div>
+        <p>To permanently delete this session from the server, type the student's name exactly as shown:</p>
+        <p><code id="deleteConfirmName"></code></p>
+        <input type="text" id="deleteConfirmInput" placeholder="Type student name here…" oninput="checkDeleteMatch()" autocomplete="off" />
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:1rem;">
+      <button class="btn btn-secondary" onclick="closeModal('printModal')">Cancel</button>
+      <button class="btn" id="btnConfirmDelete" style="background:#dc2626;color:white;border-color:#dc2626;font-weight:500;" disabled onclick="confirmDelete()">Delete session data</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Global helpers accessible from inline onclick attributes
+function closeModal(id){ document.getElementById(id).style.display='none'; }
+function toggleExpander(btn){
+  btn.classList.toggle('open');
+  const body=btn.nextElementSibling;
+  body.classList.toggle('open');
+}
+</script>
+
+<script type="module">
+import { initializeApp }    from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+import { getDatabase, ref, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
+
+/* ── FIREBASE ── */
+const firebaseConfig = {
+  apiKey:"AIzaSyAvptWQgN89vor0IPV-KpyfPR0X6ye4oXM",
+  authDomain:"atu-project-400.firebaseapp.com",
+  databaseURL:"https://atu-project-400-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"atu-project-400",
+  storageBucket:"atu-project-400.firebasestorage.app",
+  messagingSenderId:"212039676379",
+  appId:"1:212039676379:web:e233319b1e33c555b3f7fe"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db    = getDatabase(fbApp);
+
+/* ── RUBRIC ── */
+const GRADES = ['F','D','C','B','A'];
+const PCT    = [20,45,55,65,85];
+const RUBRIC = [
+  {name:'Presentation',weight:10,criteria:[
+    {name:'Organisation and structure',indicators:['Clear introduction outlining purpose and key points.','Logical flow with smooth transitions.','Well-timed presentation within allocated time.','Strong conclusion summarising key points.']},
+    {name:'Delivery',indicators:['Confident, engaging delivery with good voice modulation.','Maintains eye contact, minimal reliance on notes.','Camera on if online meeting.','Clear articulation and appropriate pacing.','Professional posture and body language.']},
+    {name:'Use of visual aids',indicators:['Visual aids are clear, relevant, and enhance understanding.','Text is concise and legible.','Effective use of images, graphs, or diagrams.','Smooth integration of visuals without distractions.']},
+    {name:'Q&A',indicators:['Listens carefully and provides clear responses.','Demonstrates strong subject knowledge.','Handles difficult questions with confidence.']}
+  ]},
+  {name:'Deliverables',weight:35,criteria:[
+    {name:'Implementation',indicators:['Demonstrates thorough understanding of chosen programming languages and frameworks.','Implements core functionalities accurately and efficiently.','Handles edge cases and error scenarios effectively.','Utilises appropriate data structures and algorithms.','Demonstrates good coding practices such as modularity and encapsulation.']},
+    {name:'Deployment',indicators:['Successfully deploys the application/system to the intended environment.','Provides clear instructions/documentation for deployment.','Ensures smooth integration with any necessary external services or dependencies.','Implements monitoring and logging mechanisms for troubleshooting post-deployment issues.']},
+    {name:'Complexity',indicators:['Addresses a sufficiently complex problem or set of requirements.','Demonstrates creativity and innovation in solving challenges.','Balances complexity with simplicity, avoiding unnecessary features or over-engineering.','Handles scalability concerns appropriately, if applicable.']},
+    {name:'Architecture',indicators:['Designs a coherent and well-structured architecture that aligns with project requirements.','Utilises appropriate design patterns and architectural styles.','Separates concerns effectively (e.g., presentation layer, business logic, data access).','Designs for extensibility and maintainability.']},
+    {name:'Source control',indicators:['Demonstrates proficiency in using version control systems (e.g., Git).','Utilises branching strategies effectively.','Commits code changes with clear and meaningful messages.','Collaborates with team members smoothly through version control.']},
+    {name:'Code design',indicators:['Adheres to coding conventions and style guidelines consistently.','Writes readable and maintainable code.','Implements modular and reusable components.','Minimises code duplication.']},
+    {name:'Code quality',indicators:['Implements thorough testing strategies (unit tests, integration tests, etc.).','Achieves high test coverage.','Handles errors and exceptions gracefully.','Conducts code reviews and addresses feedback effectively.']},
+    {name:'UI/UX design',indicators:['Designs an intuitive and user-friendly interface.','Considers user needs and feedback in the design process.','Implements responsive design for different devices and screen sizes.','Ensures accessibility for users with disabilities.']},
+    {name:'Project management',indicators:['Well defined goals and deliverables.','Ongoing monitoring using agile methods or similar.','Attendance at meetings with supervisor.','Documentation of meetings, decisions, progress and changes.','Use of project tools such as Git, Trello, Jira or similar.']}
+  ]},
+  {name:'Report',weight:20,criteria:[
+    {name:'Clarity of writing',indicators:['Writing is clear, concise, and free from unnecessary complexity.','Grammar, spelling, and punctuation are correct with minimal errors.','Ideas are logically structured with smooth transitions between sections.','Language is formal, precise, and appropriate for an academic audience.','Key arguments and points are explicitly stated and easy to follow.']},
+    {name:'Research',indicators:['A wide range of relevant and credible sources are used.','Sources are current and appropriate for the topic.','Demonstrates critical engagement with the literature, not just summary.','Identifies gaps, trends, and key debates in the research field.','Effectively integrates sources to support the review\'s argument.']},
+    {name:'Referencing',indicators:['Consistently follows an approved citation style.','All sources are properly cited both in-text and in the reference list.','Direct quotes, paraphrases, and summaries are correctly attributed.','No evidence of plagiarism or improper source usage.','Reference list is complete, correctly formatted, and in alphabetical order.']},
+    {name:'Analysis and reflection',indicators:['Goes beyond description to critically analyse and compare sources.','Evaluates the strengths, weaknesses, and limitations of the literature.','Demonstrates independent thought and synthesis of ideas.','Clearly establishes connections between sources and themes.','Reflects on the significance of findings in relation to the research topic.']},
+    {name:'Production standard',indicators:['Document is well-formatted with clear headings and logical structure.','Figures, tables, and appendices (if used) are well-presented and labelled.','Uses appropriate font, spacing, and layout for readability.','Overall presentation is polished, professional, and free from formatting errors.']},
+    {name:'Proper use of Gen AI',indicators:['The student clearly states if and how GenAI tools were used in the research or writing process.','Any references suggested by GenAI are verified against credible academic sources before inclusion.','The literature review demonstrates independent analysis and synthesis of ideas rather than relying solely on AI-generated summaries.']}
+  ]},
+  {name:'Poster',weight:5,criteria:[
+    {name:'Logical structure',indicators:['Clear title and clearly marked sections.','Information is ordered in a way that naturally guides the viewer from background to findings.','Each section is given appropriate space and is visually balanced across the poster.','Only relevant and necessary information is included; avoids overcrowding with excessive text.','Arrows, lines, numbering, or other visual guides help indicate the reading order.']},
+    {name:'Suitable fonts and graphics',indicators:['Fonts are professional, simple, and large enough to be easily read from a distance.','The same font style is used throughout for titles, subtitles, and body text.','All graphics are clear, sharp, and not pixelated; graphs are well-labelled.','Images, charts, and text are well balanced to support the message without overwhelming it.','Colours are used consistently and appropriately and maintain good contrast for accessibility.']},
+    {name:'Grammar, spelling and language',indicators:['No grammar, spelling, or punctuation mistakes across the poster.','Tense is consistently used (usually past tense for completed research).','Language is formal, concise, and professional, avoiding slang or overly casual phrases.','Sentences are straightforward, avoiding overly complex wording.','Any specialised vocabulary or jargon is briefly explained if needed for the audience.']},
+    {name:'Communication of research',indicators:['The purpose of the research is obvious and stated early on.','Results are summarised clearly and are easy to find and understand.','Tables, charts, and figures are used appropriately to support and clarify the findings.','The poster is pitched at the right level for its intended audience.']}
+  ]}
+];
+
+/* ── STATE ── */
+let currentUser = null;
+let currentView = 'grade';
+let viewingKey  = null;
+let sessionData = null;   // live Firebase data for current session
+let saveTimer   = null;
+let dbListener  = null;
+let pdfBlob     = null;   // holds generated PDF blob until delete confirmed
+
+/* ── HELPERS ── */
+const slugify    = s => s.toLowerCase().replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+const nameOf     = k => k.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+const pctToGrade = p => p<45?'F':p<55?'D':p<65?'C':p<85?'B':'A';
+const badge      = (g,mini) => `<span class="${mini?'mini-badge':'grade-badge'} ${g}">${g}</span>`;
+const sliderGrad = v => { const p=(v/4)*100; return `linear-gradient(to right,#378ADD 0%,#378ADD ${p}%,#dde2ea ${p}%,#dde2ea 100%)`; };
+
+// Recalculate gradient accounting for thumb offset at edges
+function calcGrad(v){
+  // Browser clamps thumb at edges so 0% and 100% need slight adjustment
+  const thumbHalf=9; // half of 18px thumb
+  // We can't know track pixel width in CSS, so use percentage approximation
+  const p=(v/4)*100;
+  return `linear-gradient(to right,#378ADD 0%,#378ADD ${p}%,#dde2ea ${p}%,#dde2ea 100%)`;
+}
+
+function setSyncStatus(s){
+  const dot=document.getElementById('syncDot'), lbl=document.getElementById('syncLabel');
+  if(!dot) return;
+  dot.className='sync-dot'+(s==='live'?' live':s==='saving'?' saving':'');
+  lbl.textContent=s==='live'?'Live sync':s==='saving'?'Saving…':'Offline';
+}
+function setStatus(msg,ms=3000){
+  const el=document.getElementById('statusMsg');
+  if(!el) return;
+  el.textContent=msg;
+  if(ms) setTimeout(()=>el.textContent='',ms);
+}
+
+/* ── GRADE CALCS ── */
+function getScores(aKey){ return ((sessionData||{}).scores||{})[aKey]||{}; }
+function getComments(aKey){ return ((sessionData||{}).comments||{})[aKey]||{}; }
+function assessorList(){
+  const keys=new Set(Object.keys(((sessionData||{}).scores)||{}));
+  if(currentUser) keys.add(currentUser.key);
+  return Array.from(keys);
+}
+function catPct(aKey,ci){
+  const s=getScores(aKey);
+  const vals=RUBRIC[ci].criteria.map((_,ki)=>PCT[s[`${ci}_${ki}`]??2]);
+  return Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+}
+function overallPct(aKey){
+  return Math.round(RUBRIC.reduce((t,_,ci)=>t+catPct(aKey,ci)*RUBRIC[ci].weight/100,0));
+}
+function consCatPct(ci){
+  const al=assessorList(); if(!al.length) return 55;
+  return Math.round(al.reduce((t,a)=>t+catPct(a,ci),0)/al.length);
+}
+function consOverall(){
+  const al=assessorList(); if(!al.length) return 55;
+  return Math.round(al.reduce((t,a)=>t+overallPct(a),0)/al.length);
+}
+
+/* ── LOGIN ── */
+window.doLogin = () => {
+  const name=document.getElementById('loginName').value.trim();
+  const role=document.getElementById('loginRole').value.trim();
+  if(!name){ document.getElementById('loginErr').textContent='Please enter your name.'; return; }
+  currentUser={name,role,key:slugify(name)};
+  viewingKey=currentUser.key;
+  localStorage.setItem('p400_user',JSON.stringify(currentUser));
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('mainApp').style.display='block';
+  document.getElementById('headerUser').textContent=name+(role?' · '+role:'');
+  startFirebase();
+};
+window.switchUser = () => {
+  localStorage.removeItem('p400_user');
+  location.reload();
+};
+
+/* ── FIREBASE ── */
+function startFirebase(){
+  if(dbListener) dbListener();
+  const r=ref(db,'session');
+  dbListener=onValue(r, snap=>{
+    sessionData=snap.val();
+    if(sessionData){
+      showSession();
+    } else {
+      hideSession();
+    }
+    setSyncStatus('live');
+  }, ()=>setSyncStatus('offline'));
+}
+
+function showSession(){
+  document.getElementById('noStudentMsg').style.display='none';
+  document.getElementById('studentCard').style.display='block';
+  document.getElementById('controlRow').style.display='flex';
+  document.getElementById('actionBar').style.display='flex';
+  // Fill student fields
+  const d=(sessionData.details||{});
+  document.getElementById('fName').value=d.name||'';
+  document.getElementById('fId').value=d.id||'';
+  document.getElementById('fSupervisor').value=d.supervisor||'';
+  document.getElementById('fYear').value=d.year||'2025–26';
+  renderAssessorPills();
+  renderCurrentView();
+}
+
+function hideSession(){
+  document.getElementById('noStudentMsg').style.display='block';
+  document.getElementById('studentCard').style.display='none';
+  document.getElementById('controlRow').style.display='none';
+  document.getElementById('actionBar').style.display='none';
+  document.getElementById('catContainer').innerHTML='';
+  document.getElementById('compareView').innerHTML='';
+  document.getElementById('summaryView').innerHTML='';
+}
+
+/* ── SAVE ── */
+function scheduleSave(){
+  setSyncStatus('saving');
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{
+    if(!sessionData) return;
+    update(ref(db,'session'),{
+      scores:sessionData.scores||{},
+      comments:sessionData.comments||{}
+    }).then(()=>setSyncStatus('live')).catch(()=>setSyncStatus('offline'));
+  },600);
+}
+
+window.saveStudentField = () => {
+  if(!sessionData) return;
+  const d={
+    name:document.getElementById('fName').value,
+    id:document.getElementById('fId').value,
+    supervisor:document.getElementById('fSupervisor').value,
+    year:document.getElementById('fYear').value
+  };
+  sessionData.details=d;
+  set(ref(db,'session/details'),d);
+};
+
+/* ── NEW STUDENT ── */
+window.showNewStudentModal = () => {
+  document.getElementById('nsName').value='';
+  document.getElementById('nsId').value='';
+  document.getElementById('nsErr').textContent='';
+  document.getElementById('newStudentModal').style.display='flex';
+};
+window.createStudent = () => {
+  const name=document.getElementById('nsName').value.trim();
+  const id=document.getElementById('nsId').value.trim();
+  if(!name){ document.getElementById('nsErr').textContent='Student name is required.'; return; }
+  const newSession={
+    details:{name,id,supervisor:'',year:'2025–26'},
+    scores:{},
+    comments:{},
+    createdAt:Date.now()
+  };
+  set(ref(db,'session'),newSession).then(()=>{
+    closeModal('newStudentModal');
+    setStatus('New session started for '+name);
+  });
+};
+
+/* ── ASSESSOR PILLS ── */
+function renderAssessorPills(){
+  const al=assessorList();
+  document.getElementById('assessorPills').innerHTML=al.map(k=>
+    `<button class="pill${k===viewingKey?' active':''}" onclick="window._switchViewAssessor('${k}')">${nameOf(k)}</button>`
+  ).join('');
+}
+window._switchViewAssessor=k=>{ viewingKey=k; renderAssessorPills(); renderGradeView(); };
+
+/* ── VIEW SWITCHING ── */
+window.switchView=(v,btn)=>{
+  currentView=v;
+  ['gradeView','compareView','summaryView'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById(v+'View').style.display='block';
+  document.querySelectorAll('.tab-group .tab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderCurrentView();
+};
+function renderCurrentView(){
+  if(!sessionData) return;
+  if(currentView==='grade')   renderGradeView();
+  if(currentView==='compare') renderCompareView();
+  if(currentView==='summary') renderSummaryView();
+}
+
+/* ── GRADE VIEW ── */
+function renderGradeView(){
+  if(!sessionData){ document.getElementById('catContainer').innerHTML=''; return; }
+  const isMe=viewingKey===currentUser.key;
+  const myScores=getScores(viewingKey);
+  const myComments=getComments(viewingKey);
+  let html='';
+  if(!isMe) html+=`<div style="background:#fff8e6;border:1px solid #f5d87a;border-radius:8px;padding:8px 14px;margin-bottom:.75rem;font-size:12px;color:var(--amber);">Viewing <strong>${nameOf(viewingKey)}</strong>'s scores — read only</div>`;
+  RUBRIC.forEach((cat,ci)=>{
+    const cp=catPct(viewingKey,ci); const cg=pctToGrade(cp);
+    let critHtml='';
+    cat.criteria.forEach((crit,ki)=>{
+      const v=myScores[`${ci}_${ki}`]??2;
+      const g=GRADES[v];
+      const indHtml=crit.indicators.map(i=>`<li>${i}</li>`).join('');
+      critHtml+=`<div class="crit-row">
+        <div class="crit-name">${crit.name}</div>
+        <div class="expander">
+          <button class="expander-toggle" onclick="toggleExpander(this)"><span class="arrow">▶</span> Quality indicators</button>
+          <div class="expander-body"><ul>${indHtml}</ul></div>
+        </div>
+        <div class="slider-wrap" style="margin-top:6px;">
+          <div class="track-wrap">
+            <div class="grade-ticks">${GRADES.map(g=>`<span class="grade-tick">${g}</span>`).join('')}</div>
+            <input type="range" min="0" max="4" step="1" value="${v}" style="background:${sliderGrad(v)}"
+              ${isMe?`oninput="window._updateScore(${ci},${ki},parseInt(this.value),this)"`:'disabled'}
+              id="sl_${ci}_${ki}">
+          </div>
+          <span class="grade-badge ${g}" id="gb_${ci}_${ki}">${g}</span>
+          <span class="pct-out" id="gp_${ci}_${ki}">${PCT[v]}%</span>
+        </div>
+      </div>`;
+    });
+    html+=`<div class="cat-card">
+      <div class="cat-head">
+        <span class="cat-name">${cat.name}</span>
+        <div class="cat-right">
+          <span style="font-size:11px;color:var(--text3);">Score:</span>
+          <span class="grade-badge ${cg}" id="cb_${ci}">${cg}</span>
+          <span class="pct-out" id="cp_${ci}">${cp}%</span>
+          <span class="cat-weight-pill">${cat.weight}%</span>
+        </div>
+      </div>
+      ${critHtml}
+      <div class="cat-footer">
+        <div class="comment-wrap">
+          <label>Comments</label>
+          <textarea class="comment" ${isMe?`oninput="window._updateComment(${ci},this.value)"`:'readonly'}>${myComments[ci]||''}</textarea>
+        </div>
+        <div class="cat-total">
+          <div class="cat-total-label">Category</div>
+          <span class="grade-badge ${cg}" style="font-size:15px;padding:4px 10px;" id="ctb_${ci}">${cg}</span>
+          <div class="cat-total-pct" id="ctp_${ci}">${cp}%</div>
+        </div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('catContainer').innerHTML=html;
+}
+
+window._updateScore=(ci,ki,val,input)=>{
+  input.style.background=sliderGrad(val);
+  const g=GRADES[val];
+  const gb=document.getElementById(`gb_${ci}_${ki}`);
+  if(gb){gb.className=`grade-badge ${g}`;gb.textContent=g;}
+  document.getElementById(`gp_${ci}_${ki}`).textContent=PCT[val]+'%';
+  if(!sessionData.scores) sessionData.scores={};
+  if(!sessionData.scores[currentUser.key]) sessionData.scores[currentUser.key]={};
+  sessionData.scores[currentUser.key][`${ci}_${ki}`]=val;
+  const cp=catPct(currentUser.key,ci); const cg=pctToGrade(cp);
+  ['cb_','ctb_'].forEach(p=>{const el=document.getElementById(p+ci);if(el){el.className=`grade-badge ${cg}`;el.textContent=cg;}});
+  ['cp_','ctp_'].forEach(p=>{const el=document.getElementById(p+ci);if(el)el.textContent=cp+'%';});
+  scheduleSave();
+};
+window._updateComment=(ci,val)=>{
+  if(!sessionData.comments) sessionData.comments={};
+  if(!sessionData.comments[currentUser.key]) sessionData.comments[currentUser.key]={};
+  sessionData.comments[currentUser.key][ci]=val;
+  scheduleSave();
+};
+
+/* ── COMPARE VIEW ── */
+function renderCompareView(){
+  if(!sessionData){ document.getElementById('compareView').innerHTML=''; return; }
+  const al=assessorList();
+  let html='';
+  RUBRIC.forEach((cat,ci)=>{
+    html+=`<div class="cat-card"><div class="cat-head"><span class="cat-name">${cat.name}</span><span class="cat-weight-pill">${cat.weight}%</span></div>
+    <table class="compare-table"><thead><tr><th style="width:26%">Criterion</th>
+    ${al.map(k=>`<th>${nameOf(k)}</th>`).join('')}<th>Consensus</th></tr></thead><tbody>`;
+    cat.criteria.forEach((crit,ki)=>{
+      const ps=al.map(k=>PCT[getScores(k)[`${ci}_${ki}`]??2]);
+      const avg=Math.round(ps.reduce((a,b)=>a+b,0)/ps.length);
+      html+=`<tr><td>${crit.name}</td>
+        ${al.map((k,i)=>`<td>${badge(GRADES[PCT.indexOf(ps[i])],true)} ${ps[i]}%</td>`).join('')}
+        <td>${badge(pctToGrade(avg),true)} ${avg}%</td></tr>`;
+    });
+    const tots=al.map(k=>catPct(k,ci));
+    const cc=consCatPct(ci);
+    html+=`<tr class="total"><td>Category (${cat.weight}%)</td>
+      ${tots.map(p=>`<td>${badge(pctToGrade(p),true)} ${p}%</td>`).join('')}
+      <td>${badge(pctToGrade(cc),true)} ${cc}%</td></tr>
+    </tbody></table></div>`;
+  });
+  document.getElementById('compareView').innerHTML=html;
+}
+
+/* ── SUMMARY VIEW ── */
+function renderSummaryView(){
+  if(!sessionData){ document.getElementById('summaryView').innerHTML=''; return; }
+  const al=assessorList();
+  const co=consOverall(); const cg=pctToGrade(co);
+  let html=`<div class="cat-card">
+  <div class="section-label" style="margin-bottom:.75rem;">Overall grades</div>
+  <div class="overall-row">
+  ${al.map(k=>{const op=overallPct(k);return`<div class="sum-card"><div class="sn">${nameOf(k)}</div><div class="sg ${pctToGrade(op)}">${pctToGrade(op)}</div><div class="sp">${op}%</div></div>`;}).join('')}
+  <div class="sum-card consensus"><div class="sn">Consensus</div><div class="sg">${cg}</div><div class="sp">${co}%</div></div>
+  </div></div>`;
+
+  html+=`<div class="cat-card" style="margin-top:.75rem;">
+  <div class="section-label" style="margin-bottom:.75rem;">Category breakdown — consensus</div>`;
+  RUBRIC.forEach((cat,ci)=>{
+    const cp=consCatPct(ci); const g=pctToGrade(cp);
+    html+=`<div class="bar-row">
+      <span class="bar-name">${cat.name} <span style="font-size:11px;color:var(--text3);">(${cat.weight}%)</span></span>
+      <div class="bar-track"><div class="bar-fill" style="width:${cp}%"></div></div>
+      ${badge(g,true)}
+      <span class="bar-right">${cp}% → <strong>${Math.round(cp*cat.weight/100)} pts</strong></span>
+    </div>`;
+  });
+  html+=`</div>`;
+
+  // Comments
+  let hasC=false;
+  al.forEach(k=>RUBRIC.forEach((_,ci)=>{if(getComments(k)[ci])hasC=true;}));
+  if(hasC){
+    html+=`<div class="cat-card" style="margin-top:.75rem;">
+    <div class="section-label" style="margin-bottom:.75rem;">Assessor comments</div>`;
+    RUBRIC.forEach((cat,ci)=>{
+      let catH=''; al.forEach(k=>{const c=getComments(k)[ci];if(c)catH+=`<div class="comment-item"><span class="comment-who">${nameOf(k)}:</span> ${c}</div>`;});
+      if(catH) html+=`<div style="margin-bottom:10px;"><div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;">${cat.name}</div>${catH}</div>`;
+    });
+    html+=`</div>`;
+  }
+  document.getElementById('summaryView').innerHTML=html;
+}
+
+/* ── PRINT & CLEAR ── */
+window.printAndClear=()=>{
+  if(!sessionData) return;
+  // Reset modal state
+  document.getElementById('btnDownload').disabled=false;
+  document.getElementById('btnDownload').textContent='⬇ Download PDF now';
+  document.getElementById('deleteSection').style.opacity='0.4';
+  document.getElementById('deleteSection').style.pointerEvents='none';
+  document.getElementById('deleteConfirmInput').value='';
+  document.getElementById('deleteConfirmInput').classList.remove('match');
+  document.getElementById('btnConfirmDelete').disabled=true;
+  const dets=(sessionData.details||{});
+  document.getElementById('deleteConfirmName').textContent=dets.name||'Unknown student';
+  document.getElementById('printModal').style.display='flex';
+};
+
+window.triggerDownload=()=>{
+  const dets=(sessionData||{}).details||{};
+  generateAndDownloadPDF(dets);
+  document.getElementById('btnDownload').disabled=true;
+  document.getElementById('btnDownload').textContent='✓ PDF downloaded';
+  // Unlock delete section
+  setTimeout(()=>{
+    document.getElementById('deleteSection').style.opacity='1';
+    document.getElementById('deleteSection').style.pointerEvents='auto';
+    document.getElementById('deleteConfirmInput').focus();
+  },400);
+};
+
+window.checkDeleteMatch=()=>{
+  const dets=(sessionData||{}).details||{};
+  const expected=(dets.name||'').trim();
+  const input=document.getElementById('deleteConfirmInput').value.trim();
+  const match=input===expected;
+  document.getElementById('deleteConfirmInput').classList.toggle('match',match);
+  document.getElementById('btnConfirmDelete').disabled=!match;
+};
+
+window.confirmDelete=()=>{
+  remove(ref(db,'session')).then(()=>{
+    closeModal('printModal');
+    setStatus('Session data deleted from server.',5000);
+  }).catch(()=>{
+    setStatus('Delete failed — please try again.',5000);
+  });
+};
+
+/* ── PDF GENERATION ── */
+function generateAndDownloadPDF(dets){
+  const al=assessorList();
+  const co=consOverall(); const cg=pctToGrade(co);
+  const date=new Date().toLocaleDateString('en-IE',{day:'numeric',month:'long',year:'numeric'});
+
+  let catRows='';
+  RUBRIC.forEach((cat,ci)=>{
+    const cc=consCatPct(ci);
+    catRows+=`<tr>
+      <td>${cat.name}</td><td style="text-align:center">${cat.weight}%</td>
+      ${al.map(k=>{const p=catPct(k,ci);return`<td style="text-align:center">${pctToGrade(p)}<br><span style="font-size:9pt;color:#666">${p}%</span></td>`;}).join('')}
+      <td style="text-align:center;font-weight:700">${pctToGrade(cc)}<br><span style="font-size:9pt;color:#666">${cc}%</span></td>
+    </tr>`;
+  });
+
+  let detail='';
+  RUBRIC.forEach((cat,ci)=>{
+    detail+=`<div class="section-break">
+    <h3>${cat.name} <span style="font-weight:400;font-size:11pt;color:#666">(${cat.weight}% weighting)</span></h3>
+    <table><thead><tr><th>Criterion</th>
+    ${al.map(k=>`<th style="text-align:center">${nameOf(k)}</th>`).join('')}
+    <th style="text-align:center">Consensus</th></tr></thead><tbody>`;
+    cat.criteria.forEach((crit,ki)=>{
+      const ps=al.map(k=>PCT[getScores(k)[`${ci}_${ki}`]??2]);
+      const avg=Math.round(ps.reduce((a,b)=>a+b,0)/ps.length);
+      detail+=`<tr><td>${crit.name}</td>
+        ${al.map((k,i)=>`<td style="text-align:center">${pctToGrade(ps[i])}<br><span style="font-size:9pt;color:#666">${ps[i]}%</span></td>`).join('')}
+        <td style="text-align:center;font-weight:600">${pctToGrade(avg)}<br><span style="font-size:9pt;color:#666">${avg}%</span></td></tr>`;
+    });
+    // Comments for this category
+    let hasC=false; al.forEach(k=>{if(getComments(k)[ci])hasC=true;});
+    if(hasC){
+      detail+=`<tr><td colspan="${al.length+2}" style="padding:8pt 6pt;background:#f9fafb;">
+        <div style="font-size:10pt;font-weight:600;margin-bottom:4pt;color:#444;">Comments</div>`;
+      al.forEach(k=>{const c=getComments(k)[ci];if(c)detail+=`<div style="margin-bottom:3pt;font-size:10pt;"><strong>${nameOf(k)}:</strong> ${c}</div>`;});
+      detail+=`</td></tr>`;
+    }
+    detail+=`</tbody></table></div>`;
+  });
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Project 400 — ${dets.name||'Assessment'}</title>
+  <style>
+    @page { size:A4; margin:18mm 16mm; }
+    body { font-family:Arial,Helvetica,sans-serif; font-size:11pt; color:#111; }
+    .header-block { border-bottom:2pt solid #1a3a5c; padding-bottom:10pt; margin-bottom:14pt; display:flex; justify-content:space-between; align-items:flex-end; }
+    .header-block h1 { font-size:16pt; color:#1a3a5c; margin:0 0 2pt; }
+    .header-block .meta { font-size:9.5pt; color:#555; text-align:right; line-height:1.6; }
+    .overall-box { background:#f0f7ff; border:1pt solid #b8d4f0; border-radius:4pt; padding:10pt 14pt; margin-bottom:14pt; display:flex; align-items:center; gap:18pt; }
+    .overall-grade { font-size:36pt; font-weight:700; color:#1a3a5c; line-height:1; }
+    .overall-sub { font-size:11pt; color:#444; }
+    .overall-sub strong { font-size:13pt; }
+    h2 { font-size:13pt; color:#1a3a5c; margin:14pt 0 6pt; border-bottom:0.5pt solid #ccc; padding-bottom:3pt; }
+    h3 { font-size:11.5pt; margin:12pt 0 5pt; color:#222; }
+    table { width:100%; border-collapse:collapse; font-size:10pt; margin-bottom:10pt; }
+    th { background:#1a3a5c; color:white; padding:5pt 7pt; text-align:left; font-weight:600; }
+    td { padding:5pt 7pt; border-bottom:0.5pt solid #e0e0e0; vertical-align:middle; }
+    tr:nth-child(even) td { background:#fafafa; }
+    .section-break { page-break-inside:avoid; }
+    .footer { margin-top:16pt; font-size:8.5pt; color:#999; text-align:center; border-top:0.5pt solid #ddd; padding-top:6pt; }
+  </style></head><body>
+
+  <div class="header-block">
+    <div>
+      <h1>Project 400 — Assessment Report</h1>
+      <div style="font-size:10pt;color:#555;margin-top:3pt;">Atlantic Technological University</div>
+    </div>
+    <div class="meta">
+      <div><strong>Student:</strong> ${dets.name||'—'}</div>
+      <div><strong>ID:</strong> ${dets.id||'—'}</div>
+      <div><strong>Supervisor:</strong> ${dets.supervisor||'—'}</div>
+      <div><strong>Year:</strong> ${dets.year||'—'} &nbsp;·&nbsp; <strong>Date:</strong> ${date}</div>
+    </div>
+  </div>
+
+  <div class="overall-box">
+    <div class="overall-grade">${cg}</div>
+    <div class="overall-sub">
+      <div>Overall consensus grade</div>
+      <strong>${co}% weighted average</strong>
+      <div style="font-size:9.5pt;color:#666;margin-top:3pt;">Assessors: ${al.map(nameOf).join(', ')}</div>
+    </div>
+  </div>
+
+  <h2>Category summary</h2>
+  <table><thead><tr>
+    <th>Category</th><th style="text-align:center">Weight</th>
+    ${al.map(k=>`<th style="text-align:center">${nameOf(k)}</th>`).join('')}
+    <th style="text-align:center">Consensus</th>
+  </tr></thead><tbody>${catRows}</tbody></table>
+
+  <h2>Criterion detail</h2>
+  ${detail}
+
+  <div class="footer">Generated ${date} · ATU Project 400 Assessment Panel · Data deleted after print</div>
+  </body></html>`;
+
+  const win=window.open('','_blank','width=900,height=700');
+  if(!win){ alert('Please allow popups for this page to download the PDF.'); return; }
+  win.document.write(html);
+  win.document.close();
+  win.onload=()=>{ win.focus(); win.print(); };
+}
+
+/* ── CSV ── */
+window.exportCSV=()=>{
+  if(!sessionData) return;
+  const al=assessorList();
+  const dets=(sessionData.details||{});
+  let rows=[['Student','ID','Category','Criterion',...al.map(nameOf),'Consensus %','Consensus Grade']];
+  RUBRIC.forEach((cat,ci)=>{
+    cat.criteria.forEach((crit,ki)=>{
+      const ps=al.map(k=>PCT[getScores(k)[`${ci}_${ki}`]??2]);
+      const avg=Math.round(ps.reduce((a,b)=>a+b,0)/ps.length);
+      rows.push([dets.name||'',dets.id||'',cat.name,crit.name,...ps.map(p=>p+'%'),avg+'%',pctToGrade(avg)]);
+    });
+    const tots=al.map(k=>catPct(k,ci));
+    const cc=consCatPct(ci);
+    rows.push([dets.name||'',dets.id||'',cat.name,'CATEGORY TOTAL',...tots.map(p=>p+'%'),cc+'%',pctToGrade(cc)]);
+  });
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`project400_${slugify(dets.name||'student')}.csv`; a.click();
+  setStatus('CSV downloaded.');
+};
+
+/* ── INIT ── */
+const saved=localStorage.getItem('p400_user');
+if(saved){
+  try{
+    currentUser=JSON.parse(saved);
+    viewingKey=currentUser.key;
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('mainApp').style.display='block';
+    document.getElementById('headerUser').textContent=currentUser.name+(currentUser.role?' · '+currentUser.role:'');
+    startFirebase();
+  }catch(e){ localStorage.removeItem('p400_user'); }
+}
+</script>
+</body>
+</html>
